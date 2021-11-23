@@ -1,26 +1,28 @@
 #include <iostream>
 #include <fstream>
-#include <string.h>
 #include <string>
 #include <cstdio>
 #include <cstdlib>
 #include <map>
+
+#define STRING(num) #num
 /*clase libro*/
 using namespace std;
+string TextoModificar;
 FILE* registro;;
 class Libro{
 private:
 	string TituloDelLibro;
 	string Descripcion;
 	string Autor;
-	int NumeroDePaginas;
-	float EstimadoHorasLeidas;
+	string NumeroDePaginas;
+	string EstimadoHorasLeidas;
 	map<int,string> PreguntaRespuestas;
 	string GeneroDelLibro;
 	string TipoDePlanta;
 public:
 	 Libro(){};
-	 Libro(string titulo,string descripcion,string autor,int paginas,int horasLeidas){
+	 Libro(string titulo,string descripcion,string autor,string paginas,string horasLeidas){
 	 TituloDelLibro = titulo;
 	 Descripcion = descripcion;
 	 Autor = autor;
@@ -31,8 +33,8 @@ public:
 	char* getTitulo(){return &TituloDelLibro[0];}
 	char* getDescripcion(){return &Descripcion[0];}
 	char* getAutor(){return &Autor[0];}
-	int getNumeroDePaginas(){return NumeroDePaginas;}
-	float getEstimadoHorasLeidas(){return EstimadoHorasLeidas;}
+	char* getNumeroDePaginas(){return  &EstimadoHorasLeidas[0];}
+	char* getEstimadoHorasLeidas(){return  &NumeroDePaginas[0];}
 	char* getGeneroDelLibro(){return &GeneroDelLibro[0];}
 	char* getTipoDePlanta(){return &TipoDePlanta[0];}
 	void renderizarLibro(){
@@ -43,7 +45,7 @@ public:
 		cout<<"|Descripcion del Libro: "<<Descripcion<<"\n";
 		if(Autor != "")
 		cout<<"|Autor del Libro: "<<Autor<<"\n";
-		if(NumeroDePaginas != 0)
+		if(NumeroDePaginas != "")
 		cout<<"|Numero De Paginas del Libro: "<<NumeroDePaginas<<"\n";
 		if(GeneroDelLibro != "")
 		cout<<"|Genero Del Libro del Libro: "<<GeneroDelLibro<<"\n";
@@ -55,7 +57,7 @@ public:
 };
 ///////////////////USUARIO 	/////////////////	
 class Usuario{
-	private:
+	public:
 		string nombre;
 		string clave;
 		map<int,Libro> bibliotecaPersonal;
@@ -73,8 +75,9 @@ char respuesta;
  int CrearNuevoArchivo();
  int SeleccionarArchivoCargado();
  void leerLibroTXT(string Texto);
- void leerArchivoGuardado(string,string,string);
+ int leerArchivoGuardado(string,string,string);
 
+Usuario* UsuarioEnUso;
 int main(int argc, char** argv) {
 		
 	
@@ -127,13 +130,13 @@ int main(int argc, char** argv) {
 			int c;
 			while ((c = getc(registro)) != EOF)
 				texto += (char)(c);
-			fclose(registro);
 		}
 		cout<<"Introducir la clave del archivo/usuario\n";
 		string Clave;
-		cin.ignore();
 		getline(cin,Clave);
-		leerArchivoGuardado(nombreArchivo,Clave,texto);
+		int leerExitoso;
+		leerExitoso = leerArchivoGuardado(nombreArchivo,Clave,texto);
+		if(leerExitoso == 0) throw 1;
 
 		
 		return 1;
@@ -187,53 +190,79 @@ int main(int argc, char** argv) {
 	 }
 
 }
-string leerHastaMarca(string Texto, char Limite1,char Limite2, bool encapsulamiento){
+string leerHastaMarca(char Limite1,char Limite2, bool encapsulamiento){
 	int contador = -1;
 	int posicionInicio;
 	int posicionFin;
-	for(int e = 0; e < sizeof(Texto)/ sizeof(char); e++){
-		cout<<Texto[e];
-		if(Texto[e] == Limite1){
+
+	
+	for(int e = 0; e < TextoModificar.size(); e++){
+	//	cout<<TextoModificar[e];
+	//	system("pause");
+		if(TextoModificar[e] == Limite1){
+			//cout<<"entro limite 1";
 			if(contador == -1){	contador = 0;
 			posicionInicio = e;
 			}
-		
 			if(encapsulamiento){
-			
 			 	contador++;
 				}
 			else{
-			string resultado = Texto.substr(0,e);
-			Texto = Texto.substr(e,(sizeof(Texto)/sizeof(char))-1 );
-			return 	resultado;}
+			//cout<<"entro limite real";
+			string resultado = TextoModificar.substr(0,e);
+			TextoModificar = TextoModificar.substr(e+1, TextoModificar.size());
+			return 	resultado;
+			break;
+			}
 		}
-		if(Texto[e] == Limite2){
+		if(TextoModificar[e] == Limite2){
 		contador--;		
 		}
-		if(contador =0){
+		if(contador ==0){
+		//	cout<<"logrado";
 			posicionFin = e;
-			string resultado = Texto.substr(posicionInicio,posicionFin);
-				Texto = Texto.substr(posicionFin,(sizeof(Texto)/sizeof(char))-1 );
-			return Texto.substr(posicionInicio,posicionFin);
+			string resultado = TextoModificar.substr(posicionInicio+1,posicionFin-2);
+			TextoModificar = TextoModificar.substr(posicionFin, TextoModificar.size()-1);
+			return resultado;
+			break;
 		}
 	}
 }
 void guardarLibro(Libro libroGuardar){
 
-	fputs("\n",registro);
+	fputs("\n{",registro);
 	fputs(libroGuardar.getTitulo(),registro);
-	fputs("\n",registro);
+	fputs(";\n",registro);
 	fputs(libroGuardar.getDescripcion(),registro);
-	fputs("\n",registro);
+	fputs(";\n",registro);
 	fputs(libroGuardar.getAutor(),registro);
+	fputs(";\n",registro);
+	fputs(libroGuardar.getEstimadoHorasLeidas(),registro);
+	fputs(";\n",registro);
+	fputs(libroGuardar.getNumeroDePaginas(),registro);
+	fputs(";\n}",registro);
+
 }
-void leerArchivoGuardado(string nombre,string claveIngresada,string Texto){
-	string clave=leerHastaMarca(Texto,';',';',false);
+int leerArchivoGuardado(string nombre,string claveIngresada,string Texto){
+	TextoModificar= Texto;
+	string clave=leerHastaMarca(';',';',false);
 	
-	string tituloDelLibro = leerHastaMarca(Texto,';',';',false);
+	if(clave.compare(claveIngresada) == 0){
 	
-	cout<<clave< "fin";
-	string Nombre;
+		Libro hamlet("Hamlet","muy chido la neta","Wiliam","4534","343");
+		guardarLibro( hamlet);
+		string libro = leerHastaMarca('{','}',true);
+		cout<<"libro: "<<libro;
+		//	cout<<"texto: "<<TextoModificar;
+		return 1;
+	}
+	else{
+		cout<<"clave no coincidente, volver a intentarlo\n";
+		system("pause");
+		return 0;
+	}
+	
+	
 	
 	
 }
